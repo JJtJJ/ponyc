@@ -177,29 +177,46 @@ bool reify_defaults(ast_t* typeparams, ast_t* typeargs, bool errors,
 
   if(typeparam != NULL)
   {
-    //TESTING
-    ast_t* nom = ast_blank(TK_NOMINAL);
+    //TESTING FORCING TO U32
+    //ast_t* nom = ast_blank(TK_NOMINAL);
 
-    token_t* tkn_0 = token_new(TK_ID);
-    token_set_string(tkn_0, "$0", 0);
-    ast_t* id0 = ast_token(tkn_0);
-    ast_append(nom, id0);
+    //token_t* tkn_0 = token_new(TK_ID);
+    //token_set_string(tkn_0, "$0", 0);
+    //ast_t* id0 = ast_token(tkn_0);
+    //ast_append(nom, id0);
 
-    token_t* tkn_u32 = token_new(TK_ID);
-    token_set_string(tkn_u32, "U32", 0);
-    ast_t* id32 = ast_token(tkn_u32);
-    ast_append(nom, id32);
+    //token_t* tkn_u32 = token_new(TK_ID);
+    //token_set_string(tkn_u32, "U32", 0);
+    //ast_t* id32 = ast_token(tkn_u32);
+    //ast_append(nom, id32);
 
-    ast_append(nom, ast_blank(TK_NONE));
-    ast_append(nom, ast_blank(TK_VAL));
-    ast_append(nom, ast_blank(TK_NONE));
-    ast_append(nom, ast_blank(TK_NONE));
+    //ast_append(nom, ast_blank(TK_NONE));
+    //ast_append(nom, ast_blank(TK_VAL));
+    //ast_append(nom, ast_blank(TK_NONE));
+    //ast_append(nom, ast_blank(TK_NONE));
 
-    ast_print(nom);
+    //ast_print(nom);
 
-    ast_add(typeargs, nom);
-    return true;
+    //ast_add(typeargs, nom);
+    //return true;
     //END TESTING
+    
+    //TESTING GETTING TYPE OF FIRST ARG
+    ast_t* cur = ast_parent(typeargs);
+    while(ast_id(cur) != TK_CALL)
+    {
+      cur = ast_parent(cur);
+    }
+    cur = ast_child(ast_child(ast_child(cur)));
+    cur = ast_type(cur);
+    
+    ast_print(typeparams);
+    ast_print(typeargs);
+    ast_print(cur);
+
+    ast_add(typeargs, cur);
+    return true;
+    //END
     
     if(errors)
     {
