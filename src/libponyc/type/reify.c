@@ -177,54 +177,61 @@ bool reify_defaults(ast_t* typeparams, ast_t* typeargs, bool errors,
 
   if(typeparam != NULL)
   {
-    //TESTING FORCING TO U32
-    //ast_t* nom = ast_blank(TK_NOMINAL);
-
-    //token_t* tkn_0 = token_new(TK_ID);
-    //token_set_string(tkn_0, "$0", 0);
-    //ast_t* id0 = ast_token(tkn_0);
-    //ast_append(nom, id0);
-
-    //token_t* tkn_u32 = token_new(TK_ID);
-    //token_set_string(tkn_u32, "U32", 0);
-    //ast_t* id32 = ast_token(tkn_u32);
-    //ast_append(nom, id32);
-
-    //ast_append(nom, ast_blank(TK_NONE));
-    //ast_append(nom, ast_blank(TK_VAL));
-    //ast_append(nom, ast_blank(TK_NONE));
-    //ast_append(nom, ast_blank(TK_NONE));
-
-    //ast_print(nom);
-
-    //ast_add(typeargs, nom);
-    //return true;
-    //END TESTING
     
     //TESTING GETTING TYPE OF FIRST ARG
-    ast_t* cur = ast_parent(typeargs);
-    while(ast_id(cur) != TK_CALL)
-    {
-      cur = ast_parent(cur);
-    }
-    cur = ast_child(ast_child(ast_child(cur)));
-    cur = ast_type(cur);
-    
-    ast_print(typeparams);
-    ast_print(typeargs);
-    ast_print(cur);
+    ast_t* call = ast_nearest(typeargs, TK_CALL);
+    ast_t* positionalargs = ast_child(call);
 
-    ast_add(typeargs, cur);
+    char *fname = "create";
+    ast_t* ast = ast_get_case(typeparams, fname, SYM_NONE);
+    ast_t* params = ast_childidx(ast, 3);
+
+    typeparam = ast_child(typeparams);
+    int param_num = 0;
+
+    while(typeparam != NULL)
+    {
+      const char *param_id = ast_name(ast_child(typeparam));
+      
+      ast_t* param = ast_child(params);
+      param_num = 0;
+      while(param != NULL)
+      {
+        if (ast_name(ast_child(ast_childidx(param, 1))) == param_id)
+        {
+          // Infer type param from this arg
+          ast_print(param);
+          break;
+        }
+
+        param = ast_sibling(param);
+        param_num++;
+      }
+      if (param == NULL)
+      {
+        break;
+      }
+
+      ast_t* type = ast_type(ast_child(ast_childidx(positionalargs, param_num)));
+      ast_print(type);
+      ast_append(typeargs, type);
+
+      typeparam = ast_sibling(typeparam);
+    }
+
+    if (typeparam == NULL)
+    {
+      if(errors)
+      {
+        ast_error(opt->check.errors, typeargs, "not enough type arguments");
+        ast_error_continue(opt->check.errors, typeparams, "definition is here");
+      }
+
+      return false;
+    }
+
     return true;
     //END
-    
-    if(errors)
-    {
-      ast_error(opt->check.errors, typeargs, "not enough type arguments");
-      ast_error_continue(opt->check.errors, typeparams, "definition is here");
-    }
-
-    return false;
   }
 
   return true;
