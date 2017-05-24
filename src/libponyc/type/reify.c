@@ -5,6 +5,7 @@
 #include "alias.h"
 #include "../ast/token.h"
 #include "ponyassert.h"
+#include <string.h>
 
 static void reify_typeparamref(pass_opt_t* opt, ast_t** astp, ast_t* typeparam, ast_t* typearg)
 {
@@ -132,6 +133,49 @@ static void reify_one(pass_opt_t* opt, ast_t** astp, ast_t* typeparam, ast_t* ty
   }
 }
 
+bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
+{
+    ast_t* call = ast_nearest(typeargs, TK_CALL);
+    ast_t* positionalargs = ast_child(call);
+
+    char *fname = "create";
+    ast_t* ast = ast_get_case(typeparams, fname, SYM_NONE);
+    ast_t* params = ast_childidx(ast, 3);
+
+    ast_t* typeparam = ast_child(typeparams);
+    int param_num = 0;
+
+    while(typeparam != NULL)
+    {
+      const char *param_id = ast_name(ast_child(typeparam));
+      
+      ast_t* param = ast_child(params);
+      param_num = 0;
+      while(param != NULL)
+      {
+        if (!strcmp(ast_name(ast_child(ast_childidx(param, 1))), param_id))
+        {
+          // Infer type param from this arg
+          ast_print(param);
+          break;
+        }
+
+        param = ast_sibling(param);
+        param_num++;
+      }
+      if (param == NULL)
+        return false;
+
+      ast_t* type = ast_type(ast_child(ast_childidx(positionalargs, param_num)));
+      ast_print(type);
+      ast_append(typeargs, type);
+
+      typeparam = ast_sibling(typeparam);
+    }
+
+    return true;
+}
+
 bool reify_defaults(ast_t* typeparams, ast_t* typeargs, bool errors,
   pass_opt_t* opt)
 {
@@ -175,63 +219,19 @@ bool reify_defaults(ast_t* typeparams, ast_t* typeargs, bool errors,
     typeparam = ast_sibling(typeparam);
   }
 
-  if(typeparam != NULL)
+  if (typeparam != NULL)
   {
-    
-    //TESTING GETTING TYPE OF FIRST ARG
-    ast_t* call = ast_nearest(typeargs, TK_CALL);
-    ast_t* positionalargs = ast_child(call);
+    if (infer_gen_args(typeparams, typeargs))
+        return true;
 
-    char *fname = "create";
-    ast_t* ast = ast_get_case(typeparams, fname, SYM_NONE);
-    ast_t* params = ast_childidx(ast, 3);
-
-    typeparam = ast_child(typeparams);
-    int param_num = 0;
-
-    while(typeparam != NULL)
+    // A missing type parameter went without being inferred
+    if (errors)
     {
-      const char *param_id = ast_name(ast_child(typeparam));
-      
-      ast_t* param = ast_child(params);
-      param_num = 0;
-      while(param != NULL)
-      {
-        if (ast_name(ast_child(ast_childidx(param, 1))) == param_id)
-        {
-          // Infer type param from this arg
-          ast_print(param);
-          break;
-        }
-
-        param = ast_sibling(param);
-        param_num++;
-      }
-      if (param == NULL)
-      {
-        break;
-      }
-
-      ast_t* type = ast_type(ast_child(ast_childidx(positionalargs, param_num)));
-      ast_print(type);
-      ast_append(typeargs, type);
-
-      typeparam = ast_sibling(typeparam);
+      ast_error(opt->check.errors, typeargs, "not enough type arguments");
+      ast_error_continue(opt->check.errors, typeparams, "definition is here");
     }
 
-    if (typeparam == NULL)
-    {
-      if(errors)
-      {
-        ast_error(opt->check.errors, typeargs, "not enough type arguments");
-        ast_error_continue(opt->check.errors, typeparams, "definition is here");
-      }
-
-      return false;
-    }
-
-    return true;
-    //END
+    return false;
   }
 
   return true;
