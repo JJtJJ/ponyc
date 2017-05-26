@@ -149,22 +149,6 @@ bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
     {
       const char *param_id = ast_name(ast_child(typeparam));
       
-      ast_t* param = ast_child(params);
-      param_num = 0;
-      while(param != NULL)
-      {
-        if (!strcmp(ast_name(ast_child(ast_childidx(param, 1))), param_id))
-        {
-          // Infer type param from this arg
-          ast_print(param);
-          break;
-        }
-
-        param = ast_sibling(param);
-        param_num++;
-      }
-      if (param == NULL)
-        return false;
 
       ast_t* type = ast_type(ast_child(ast_childidx(positionalargs, param_num)));
       ast_print(type);
@@ -174,6 +158,31 @@ bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
     }
 
     return true;
+}
+
+bool extract_type(const char* typeparam, ast_t* params, ast_t* positionalargs, 
+  ast_t* out_type)
+{
+  ast_t* param = ast_child(params);
+  param_num = 0;
+  while(param != NULL)
+  {
+    if (!strcmp(ast_name(ast_child(ast_childidx(param, 1))), typeparam))
+    {
+      // Infer type param from this arg
+      ast_print(param);
+      break;
+    }
+
+    param = ast_sibling(param);
+    param_num++;
+  }
+  if (param == NULL)
+    return false;
+
+  out_type = ast_type(ast_child(ast_childidx(positionalargs, param_num)));
+  ast_print(type);
+  return true;
 }
 
 bool reify_defaults(ast_t* typeparams, ast_t* typeargs, bool errors,
