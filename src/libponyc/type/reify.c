@@ -135,54 +135,123 @@ static void reify_one(pass_opt_t* opt, ast_t** astp, ast_t* typeparam, ast_t* ty
 
 bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
 {
-    ast_t* call = ast_nearest(typeargs, TK_CALL);
-    ast_t* positionalargs = ast_child(call);
+  ast_t* call = ast_nearest(typeargs, TK_CALL);
+  ast_t* positionalargs = ast_child(call);
 
-    char *fname = "create";
-    ast_t* ast = ast_get_case(typeparams, fname, SYM_NONE);
-    ast_t* params = ast_childidx(ast, 3);
+  char *fname = "create";
+  ast_t* ast = ast_get_case(typeparams, fname, SYM_NONE);
+  ast_t* params = ast_childidx(ast, 3);
 
-    ast_t* typeparam = ast_child(typeparams);
-    int param_num = 0;
+  ast_t* typeparam = ast_child(typeparams);
 
-    while(typeparam != NULL)
-    {
-      const char *param_id = ast_name(ast_child(typeparam));
-      
+  while(typeparam != NULL)
+  {
+    //ast_print(params);
+    //ast_print(positionalargs);
+    const char *param_id = ast_name(ast_child(typeparam));
+    ast_t* type = NULL;
+    if (!extract_type(param_id, params, positionalargs, &type))
+        return false;
 
-      ast_t* type = ast_type(ast_child(ast_childidx(positionalargs, param_num)));
-      ast_print(type);
-      ast_append(typeargs, type);
+    pony_assert(type != NULL);
+    ast_printverbose(type);
+    ast_append(typeargs, type);
 
-      typeparam = ast_sibling(typeparam);
-    }
+    typeparam = ast_sibling(typeparam);
+  }
 
-    return true;
+  return true;
+}
+
+bool extract_type_typeargs(const char* typeparam, ast_t* param, ast_t* args, ast_t** out_type)
+{
+  pony_assert(
+    (ast_id(param) == TK_TYPEARGS) ||
+    (ast_id(param) == TK_NONE)
+    );
+
+  ast_t* ref = ast_child(param);
+  ast_t* type = ast_child(args);
+  while (ref != NULL)
+  {
+    if (extract_type_inner(typeparam, ref, type, out_type))
+        return true;
+
+    ref = ast_sibling(ref);
+    type = ast_sibling(type);
+  }
+
+  return false;
+}
+
+bool extract_type_inner(const char* typeparam, ast_t* param, ast_t* args, ast_t** out_type)
+{
+  pony_assert(
+    (ast_id(param) == TK_PARAM && ast_id(args) == TK_SEQ) ||
+    (ast_id(param) == TK_TYPEARGS && ast_id(args) == TK_TYPEARGS) ||
+    (ast_id(param) == TK_TYPEPARAMREF) ||
+    (ast_id(param) == TK_NOMINAL) ||
+    (ast_id(param) == TK_NONE)
+    );
+
+  ast_t* next_param;
+  ast_t* next_arg;
+
+  ast_print(param);
+  ast_print(args);
+
+  switch(ast_id(param))
+  {
+    case TK_PARAM:
+      next_param = ast_childidx(param, 1);
+      next_arg = ast_type(args);
+      return extract_type_inner(typeparam, next_param, next_arg, out_type);
+      break;
+    case TK_TYPEARGS:
+      return extract_type_typeargs(typeparam, param, args, out_type);
+      break;
+    case TK_TYPEPARAMREF:
+      if (!strcmp(ast_name(ast_child(param)), typeparam))
+      {
+        *out_type = args;
+        return true;
+      }
+      return false;
+      break;
+    case TK_NOMINAL:
+      next_param = ast_childidx(param, 2);
+      next_arg = ast_childidx(args, 2);
+      return extract_type_inner(typeparam, next_param, next_arg, out_type);
+      break;
+    default:
+      break;
+  }
+
+  return false;
 }
 
 bool extract_type(const char* typeparam, ast_t* params, ast_t* positionalargs, 
-  ast_t* out_type)
+  ast_t** out_type)
 {
+  pony_assert(
+    (ast_id(params) == TK_PARAMS) ||
+    (ast_id(params) == TK_NONE)
+    );
+
   ast_t* param = ast_child(params);
-  param_num = 0;
+  ast_t* arg = ast_child(positionalargs);
   while(param != NULL)
   {
-    if (!strcmp(ast_name(ast_child(ast_childidx(param, 1))), typeparam))
-    {
-      // Infer type param from this arg
-      ast_print(param);
+    if (extract_type_inner(typeparam, param, arg, out_type))
       break;
-    }
 
     param = ast_sibling(param);
-    param_num++;
+    arg = ast_sibling(arg);
   }
   if (param == NULL)
     return false;
 
-  out_type = ast_type(ast_child(ast_childidx(positionalargs, param_num)));
-  ast_print(type);
-  return true;
+  return *out_type != NULL;
 }
 
 bool reify_defaults(ast_t* typeparams, ast_t* typeargs, bool errors,

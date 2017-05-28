@@ -9,7 +9,9 @@ PONY_EXTERN_C_BEGIN
 
 bool infer_gen_args(ast_t* typeparams, ast_t* typeargs);
 
-bool extract_type(const char* typeparam, ast_t* param, ast_t* out_type);
+bool extract_type_inner(const char* typeparam, ast_t* param, ast_t* args, ast_t** out_type);
+
+bool extract_type(const char* typeparam, ast_t* params, ast_t* positionalargs, ast_t** out_type);
 
 bool reify_defaults(ast_t* typeparams, ast_t* typeargs, bool errors,
   pass_opt_t* opt);
