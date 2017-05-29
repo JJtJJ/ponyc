@@ -172,7 +172,7 @@ bool extract_type_typeargs(const char* typeparam, ast_t* param, ast_t* args, ast
 
   ast_t* ref = ast_child(param);
   ast_t* type = ast_child(args);
-  while (ref != NULL)
+  while (ref != NULL && type != NULL)
   {
     if (extract_type_inner(typeparam, ref, type, out_type))
         return true;
@@ -205,7 +205,8 @@ bool extract_type_inner(const char* typeparam, ast_t* param, ast_t* args, ast_t*
     case TK_PARAM:
       next_param = ast_childidx(param, 1);
       next_arg = ast_type(args);
-      return extract_type_inner(typeparam, next_param, next_arg, out_type);
+      if(next_param != NULL && next_arg != NULL)
+        return extract_type_inner(typeparam, next_param, next_arg, out_type);
       break;
     case TK_TYPEARGS:
       return extract_type_typeargs(typeparam, param, args, out_type);
@@ -216,12 +217,12 @@ bool extract_type_inner(const char* typeparam, ast_t* param, ast_t* args, ast_t*
         *out_type = args;
         return true;
       }
-      return false;
       break;
     case TK_NOMINAL:
       next_param = ast_childidx(param, 2);
       next_arg = ast_childidx(args, 2);
-      return extract_type_inner(typeparam, next_param, next_arg, out_type);
+      if(next_param != NULL && next_arg != NULL)
+        return extract_type_inner(typeparam, next_param, next_arg, out_type);
       break;
     default:
       break;
@@ -240,7 +241,7 @@ bool extract_type(const char* typeparam, ast_t* params, ast_t* positionalargs,
 
   ast_t* param = ast_child(params);
   ast_t* arg = ast_child(positionalargs);
-  while(param != NULL)
+  while(param != NULL && arg != NULL)
   {
     if (extract_type_inner(typeparam, param, arg, out_type))
       break;
@@ -305,7 +306,7 @@ bool reify_defaults(ast_t* typeparams, ast_t* typeargs, bool errors,
     // A missing type parameter went without being inferred
     if (errors)
     {
-      ast_error(opt->check.errors, typeargs, "not enough type arguments");
+      ast_error(opt->check.errors, typeargs, "not enough type arguments, and could not infer type arguments");
       ast_error_continue(opt->check.errors, typeparams, "definition is here");
     }
 
