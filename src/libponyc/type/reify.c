@@ -133,12 +133,33 @@ static void reify_one(pass_opt_t* opt, ast_t** astp, ast_t* typeparam, ast_t* ty
   }
 }
 
+const char *method_name(ast_t* typeparams)
+{
+  ast_t* parent = ast_parent(typeparams);
+  if(parent == NULL)
+    return NULL;
+
+  switch(ast_id(parent))
+  {
+    case TK_CLASS:
+      return "create";
+    case TK_FUNTYPE:
+      return ast_name(ast_previous(parent));
+    default:
+      return NULL;
+  }
+}
+
 bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
 {
   ast_t* call = ast_nearest(typeargs, TK_CALL);
   ast_t* positionalargs = ast_child(call);
 
-  char *fname = "create";
+  //ast_print(call);
+  ast_print(typeparams);
+
+  const char *fname = method_name(typeparams);
+
   ast_t* ast = ast_get_case(typeparams, fname, SYM_NONE);
   ast_t* params = ast_childidx(ast, 3);
 
@@ -146,15 +167,13 @@ bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
 
   while(typeparam != NULL)
   {
-    //ast_print(params);
-    //ast_print(positionalargs);
     const char *param_id = ast_name(ast_child(typeparam));
     ast_t* type = NULL;
     if (!extract_type(param_id, params, positionalargs, &type))
         return false;
 
     pony_assert(type != NULL);
-    ast_printverbose(type);
+    ast_print(type);
     ast_append(typeargs, type);
 
     typeparam = ast_sibling(typeparam);
@@ -194,11 +213,11 @@ bool extract_type_inner(const char* typeparam, ast_t* param, ast_t* args, ast_t*
     (ast_id(param) == TK_NONE)
     );
 
-  ast_t* next_param;
-  ast_t* next_arg;
-
   ast_print(param);
   ast_print(args);
+
+  ast_t* next_param;
+  ast_t* next_arg;
 
   switch(ast_id(param))
   {
@@ -226,6 +245,7 @@ bool extract_type_inner(const char* typeparam, ast_t* param, ast_t* args, ast_t*
       break;
     default:
       break;
+
   }
 
   return false;
@@ -306,7 +326,8 @@ bool reify_defaults(ast_t* typeparams, ast_t* typeargs, bool errors,
     // A missing type parameter went without being inferred
     if (errors)
     {
-      ast_error(opt->check.errors, typeargs, "not enough type arguments, and could not infer type arguments");
+      ast_error(opt->check.errors, typeargs, "not enough type arguments, "
+          "and could not infer type arguments");
       ast_error_continue(opt->check.errors, typeparams, "definition is here");
     }
 
