@@ -133,16 +133,26 @@ static void reify_one(pass_opt_t* opt, ast_t** astp, ast_t* typeparam, ast_t* ty
   }
 }
 
-const char *method_name(ast_t* typeparams)
+const char *method_name(ast_t* typeparams, ast_t* call)
 {
   ast_t* parent = ast_parent(typeparams);
   if(parent == NULL)
     return NULL;
 
+  ast_t* ctx = ast_childidx(call, 2);
+
   switch(ast_id(parent))
   {
     case TK_CLASS:
-      return "create";
+      switch(ast_id(ctx))
+      {
+        case TK_TYPEREF:
+          return "create";
+        case TK_DOT:
+          return ast_name(ast_childidx(ctx, 1));
+        default:
+          return NULL;
+      }
     case TK_FUNTYPE:
       return ast_name(ast_previous(parent));
     default:
@@ -152,15 +162,23 @@ const char *method_name(ast_t* typeparams)
 
 bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
 {
+  //ast_t* t = typeparams;
+  //while(ast_parent(t) != NULL)
+  //{
+  //  t = ast_parent(t);
+  //}
+  //ast_print(t);
+  //
+
   ast_t* call = ast_nearest(typeargs, TK_CALL);
   ast_t* positionalargs = ast_child(call);
 
-  //ast_print(call);
   ast_print(typeparams);
 
-  const char *fname = method_name(typeparams);
+  const char *fname = method_name(typeparams, call);
 
   ast_t* ast = ast_get_case(typeparams, fname, SYM_NONE);
+  ast_print(ast);
   ast_t* params = ast_childidx(ast, 3);
 
   ast_t* typeparam = ast_child(typeparams);
