@@ -154,7 +154,8 @@ const char *method_name(ast_t* typeparams, ast_t* call)
           return NULL;
       }
     case TK_FUNTYPE:
-      return ast_name(ast_previous(parent));
+      return ast_name(ast_childidx(ast_parent(parent), 1));
+      break;
     default:
       return NULL;
   }
@@ -168,18 +169,34 @@ bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
   //  t = ast_parent(t);
   //}
   //ast_print(t);
-  //
 
-  ast_t* call = ast_nearest(typeargs, TK_CALL);
+  ast_t* call = ast_nearest(typeparams, TK_CALL);
+  if(call == NULL)
+  {
+    call = ast_nearest(typeargs, TK_CALL);
+  }
+  //ast_print(call);
   ast_t* positionalargs = ast_child(call);
 
-  ast_print(typeparams);
+  //ast_print(typeparams);
 
-  const char *fname = method_name(typeparams, call);
+  ast_t* params = NULL;
+  bool is_method = ast_id(ast_parent(typeparams)) == TK_FUNTYPE;
 
-  ast_t* ast = ast_get_case(typeparams, fname, SYM_NONE);
-  ast_print(ast);
-  ast_t* params = ast_childidx(ast, 3);
+  if(is_method)
+  {
+    params = ast_sibling(typeparams);
+  }
+  else
+  {
+    const char *fname = method_name(typeparams, call);
+    ast_t* method_ast = ast_get_case(typeparams, fname, SYM_NONE);
+    if(ast_id(method_ast) != TK_NEW)
+      return false;
+
+    params = ast_childidx(method_ast, 3);
+  }
+  //ast_print(params);
 
   ast_t* typeparam = ast_child(typeparams);
 
@@ -293,6 +310,30 @@ bool extract_type(const char* typeparam, ast_t* params, ast_t* positionalargs,
   return *out_type != NULL;
 }
 
+//bool transform_provides(ast_t* expected, ast_t* actual)
+//{
+//  pony_assert(
+//    (ast_id(expected) == TK_NOMINAL) &&
+//    (ast_id(actual) == TK_NOMINAL)
+//    );
+//
+//  const char* ex_name = ast_name(ast_childidx(expected, 1));
+//  const char* act_name = ast_name(ast_childidx(actual, 1));
+//
+//  ast_t* act_type_def = ast_get_case(expected, act_name, SYM_NONE);
+//  if(act_type_def == NULL)
+//    return false;
+//
+//  ast_t* provide = ast_child(ast_childidx(act_type_def, 3));
+//  while(provide != NULL)
+//  {
+//    if(!strcmp(ast_name(ast_childidx(provide, 1)), ex_name))
+//    {
+//    //TODO
+//    }
+//  }
+//}
+
 bool reify_defaults(ast_t* typeparams, ast_t* typeargs, bool errors,
   pass_opt_t* opt)
 {
@@ -338,11 +379,11 @@ bool reify_defaults(ast_t* typeparams, ast_t* typeargs, bool errors,
 
   if (typeparam != NULL)
   {
-    if (infer_gen_args(typeparams, typeargs))
-        return true;
+    if(infer_gen_args(typeparams, typeargs))
+      return true;
 
     // A missing type parameter went without being inferred
-    if (errors)
+    if(errors)
     {
       ast_error(opt->check.errors, typeargs, "not enough type arguments, "
           "and could not infer type arguments");
