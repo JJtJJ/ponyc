@@ -175,6 +175,10 @@ bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
   {
     call = ast_nearest(typeargs, TK_CALL);
   }
+
+  if(call == NULL)
+    return false;
+
   //ast_print(call);
   ast_t* positionalargs = ast_child(call);
 
@@ -208,7 +212,7 @@ bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
         return false;
 
     pony_assert(type != NULL);
-    ast_print(type);
+    //ast_print(type);
     ast_append(typeargs, type);
 
     typeparam = ast_sibling(typeparam);
@@ -248,8 +252,8 @@ bool extract_type_inner(const char* typeparam, ast_t* param, ast_t* args, ast_t*
     (ast_id(param) == TK_NONE)
     );
 
-  ast_print(param);
-  ast_print(args);
+  //ast_print(param);
+  //ast_print(args);
 
   ast_t* next_param;
   ast_t* next_arg;
