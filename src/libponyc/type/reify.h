@@ -13,6 +13,9 @@ bool extract_type_inner(const char* typeparam, ast_t* param, ast_t* args, ast_t*
 
 bool extract_type(const char* typeparam, ast_t* params, ast_t* positionalargs, ast_t** out_type);
 
+bool transform_provides(ast_t* expected, ast_t** actual);
+bool transform_inner(ast_t** typeargs, ast_t* actual_typeparams, ast_t* actual_typeargs);
+
 bool reify_defaults(ast_t* typeparams, ast_t* typeargs, bool errors,
   pass_opt_t* opt);
 

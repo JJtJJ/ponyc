@@ -123,3 +123,21 @@ TEST_F(GenericInferenceTest, InferTwoMissingMethodTypeParameters)
 
   TEST_COMPILE(src);
 }
+
+TEST_F(GenericInferenceTest, TransformProvidesTypes)
+{
+  const char* src =
+    "actor Main\n"
+    "  new create(env: Env) =>\n"
+    "    var a = A(Classy(U32(0), U16(52)))\n"
+
+    "trait Traity[T]\n"
+
+    "class Classy[T, S] is Traity[(T, S)]\n"
+    "  new create(t: T, s: S) => None\n"
+
+    "class A[T]\n"
+    "  new create(t: Traity[T]) => None";
+
+  TEST_COMPILE(src);
+}
