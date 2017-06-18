@@ -180,6 +180,7 @@ bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
     return false;
 
   //ast_print(call);
+
   ast_t* positionalargs = ast_child(call);
 
   //ast_print(typeparams);
@@ -348,12 +349,7 @@ bool transform_provides(ast_t* expected, ast_t** actual)
     return true;
 
   ast_t* act_typeargs = ast_childidx(*actual, 2);
-  ast_t* program = expected;
-  while(ast_parent(program) != NULL)
-  {
-    program = ast_parent(program);
-  }
-  ast_t* act_type_def = ast_get_case(program, act_name, SYM_NONE);
+  ast_t* act_type_def = ast_get_case(expected, act_name, SYM_NONE);
   if(act_type_def == NULL)
     return false;
 
