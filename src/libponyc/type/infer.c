@@ -2,13 +2,7 @@
 
 bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
 {
-  //ast_t* t = typeparams;
-  //while(ast_parent(t) != NULL)
-  //{
-  //  t = ast_parent(t);
-  //}
-  //ast_print(t);
-
+  // Get the call definition
   ast_t* call = ast_nearest(typeparams, TK_CALL);
   if(call == NULL)
   {
@@ -18,15 +12,12 @@ bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
   if(call == NULL)
     return false;
 
-  //ast_print(call);
-
   ast_t* positionalargs = ast_child(call);
-
-  //ast_print(typeparams);
 
   ast_t* params = NULL;
   bool is_method = ast_id(ast_parent(typeparams)) == TK_FUNTYPE;
 
+  // Get method parameters
   if(is_method)
   {
     params = ast_sibling(typeparams);
@@ -40,10 +31,11 @@ bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
 
     params = ast_childidx(method_ast, 3);
   }
-  //ast_print(params);
 
   ast_t* typeparam = ast_child(typeparams);
 
+  // For each type parameter, attempt to extract a type for that
+  // parameter from the arguments
   while(typeparam != NULL)
   {
     const char *param_id = ast_name(ast_child(typeparam));
@@ -52,7 +44,6 @@ bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
         return false;
 
     pony_assert(type != NULL);
-    //ast_print(type);
     ast_append(typeargs, type);
 
     typeparam = ast_sibling(typeparam);
@@ -61,6 +52,10 @@ bool infer_gen_args(ast_t* typeparams, ast_t* typeargs)
   return true;
 }
 
+/**
+ * Extract the type of typeparam from the formal parameters and the arguments to the
+ * constructor or method
+ */
 bool extract_type(const char* typeparam, ast_t* params, ast_t* positionalargs, 
   ast_t** out_type)
 {
@@ -96,9 +91,6 @@ bool extract_type_inner(const char* typeparam, ast_t* param, ast_t* args, ast_t*
     (ast_id(param) == TK_NOMINAL) ||
     (ast_id(param) == TK_NONE)
     );
-
-  //ast_print(param);
-  //ast_print(args);
 
   ast_t* next_param;
   ast_t* next_arg;
@@ -171,15 +163,16 @@ bool extract_type_typeargs(const char* typeparam, ast_t* param, ast_t* args, ast
   return false;
 }
 
+
+/**
+ * Transform the actual given type to match the shape of the expected type
+ */
 bool transform_provides(ast_t* expected, ast_t** actual)
 {
   pony_assert(
     (ast_id(expected) == TK_NOMINAL) &&
     (ast_id(*actual) == TK_NOMINAL)
     );
-
-  //ast_print(expected);
-  //ast_print(*actual);
 
   const char* ex_name = ast_name(ast_childidx(expected, 1));
   const char* act_name = ast_name(ast_childidx(*actual, 1));
@@ -191,8 +184,6 @@ bool transform_provides(ast_t* expected, ast_t** actual)
   ast_t* act_type_def = ast_get_case(expected, act_name, SYM_NONE);
   if(act_type_def == NULL)
     return false;
-
-  //ast_print(act_type_def);
 
   ast_t* provide = ast_child(ast_childidx(act_type_def, 3));
   while(provide != NULL)
@@ -208,8 +199,6 @@ bool transform_provides(ast_t* expected, ast_t** actual)
         ast_free(new_typeargs);
         return false;
       }
-
-      //ast_print(new_typeargs);
 
       ast_t* name_ast = ast_childidx(*actual, 1);
       ast_replace(&name_ast, ast_childidx(expected, 1));
