@@ -4,6 +4,7 @@
 #include <platform.h>
 #include "../ast/ast.h"
 #include "../pass/pass.h"
+#include "./infer.h"
 
 PONY_EXTERN_C_BEGIN
 
